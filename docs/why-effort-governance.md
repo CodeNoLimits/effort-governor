@@ -90,9 +90,7 @@ echo "why is the deploy failing, debug it" | bin/effort-select --badge
 
 ---
 
-*Built by **DreamNova**. We design and govern AI-agent workflows for teams —
-making them cheaper, more predictable, and observable. If you're running coding
-agents in production and want help, [open an issue](https://github.com/CodeNoLimits/effort-governor/issues)
-or reach out.*
-
-<!-- David: swap the line above for your DreamNova Consult landing/contact URL before sharing widely. -->
+*Built by **[DreamNova](https://dreamnova-agents.vercel.app)**. We engineer and
+govern AI-agent workflows for teams — cheaper, observable, predictable. If you're
+running coding agents in production and want help,
+**[book a call →](https://dreamnova-agents.vercel.app)**.*

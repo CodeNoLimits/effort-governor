@@ -12,7 +12,7 @@ same logic across Claude Code, Grok, or any agent.
 ★ EFFORT ⟶ MAX     · keyword: refactor
 ```
 
-> Built by [DreamNova](https://github.com/CodeNoLimits). Apache-2.0.
+> Built by [DreamNova](https://dreamnova-agents.vercel.app) — AI agent engineering & governance for teams. Apache-2.0.
 
 ---
 
