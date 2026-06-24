@@ -1,0 +1,17 @@
+{
+  "//": "Merge this into ~/.claude/settings.json (do not overwrite your existing hooks).",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 $HOME/Projects/Active/effort-governor/adapters/claude_code/auto_effort.py",
+            "timeout": 5,
+            "statusMessage": "Effort selector…"
+          }
+        ]
+      }
+    ]
+  }
+}

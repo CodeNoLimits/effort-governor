@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+"""
+effort-select — CLI for effort-governor.
+
+    echo "my task"     | effort-select            # JSON
+    effort-select "my task"                        # JSON
+    effort-select --prefix "my task"               # directive only (to prepend)
+    effort-select --badge  "my task"               # visible badge only
+    effort-select --level  "my task"               # LOW|MEDIUM|HIGH|MAX
+"""
+import sys, os, json
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from effort_governor.core import classify, directive, badge  # noqa: E402
+
+
+def _read(argv):
+    args = [a for a in argv if not a.startswith("--")]
+    if args:
+        return " ".join(args)
+    if not sys.stdin.isatty():
+        return sys.stdin.read()
+    return ""
+
+
+def main():
+    mode = next((a for a in sys.argv[1:] if a.startswith("--")), "--json")
+    prompt = _read(sys.argv[1:])
+    level, reason = classify(prompt)
+    if mode == "--prefix":
+        print(f"EFFORT {level} — {directive(level)}")
+    elif mode == "--badge":
+        print(badge(level, reason))
+    elif mode == "--level":
+        print(level)
+    else:
+        print(json.dumps({"level": level, "reason": reason,
+                          "directive": directive(level),
+                          "badge": badge(level, reason)}, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()

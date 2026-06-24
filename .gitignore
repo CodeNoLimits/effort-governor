@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+*.log
+.venv/
+venv/
+# user-local tuning override
+config.json
+.config/
