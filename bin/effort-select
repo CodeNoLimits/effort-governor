@@ -7,25 +7,33 @@ effort-select — CLI for effort-governor.
     effort-select --prefix "my task"               # directive only (to prepend)
     effort-select --badge  "my task"               # visible badge only
     effort-select --level  "my task"               # LOW|MEDIUM|HIGH|MAX
+    effort-select --params openai "my task"         # native effort kwargs (JSON)
 """
 import sys, os, json
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from effort_governor.core import classify, directive, badge  # noqa: E402
-
-
-def _read(argv):
-    args = [a for a in argv if not a.startswith("--")]
-    if args:
-        return " ".join(args)
-    if not sys.stdin.isatty():
-        return sys.stdin.read()
-    return ""
+from effort_governor.core import classify, directive, badge, effort_params  # noqa: E402
 
 
 def main():
-    mode = next((a for a in sys.argv[1:] if a.startswith("--")), "--json")
-    prompt = _read(sys.argv[1:])
+    argv = sys.argv[1:]
+    mode = next((a for a in argv if a.startswith("--")), "--json")
+    provider = "openai"
+    # --params consumes the following token as the provider name
+    words = []
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--params" and i + 1 < len(argv) and not argv[i + 1].startswith("--"):
+            provider = argv[i + 1]
+            i += 2
+            continue
+        if not a.startswith("--"):
+            words.append(a)
+        i += 1
+    prompt = " ".join(words) if words else (
+        "" if sys.stdin.isatty() else sys.stdin.read())
+
     level, reason = classify(prompt)
     if mode == "--prefix":
         print(f"EFFORT {level} — {directive(level)}")
@@ -33,6 +41,8 @@ def main():
         print(badge(level, reason))
     elif mode == "--level":
         print(level)
+    elif mode == "--params":
+        print(json.dumps(effort_params(level, provider), ensure_ascii=False))
     else:
         print(json.dumps({"level": level, "reason": reason,
                           "directive": directive(level),

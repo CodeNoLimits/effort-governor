@@ -1,7 +1,8 @@
 """Tests for effort_governor.core — run: python3 -m pytest -q  (or: python3 tests/test_core.py)."""
 import os, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from effort_governor.core import classify, directive, badge, ICON  # noqa: E402
+from effort_governor.core import (classify, directive, badge, effort_params,  # noqa: E402
+                                  evaluate, ICON)
 
 CASES = [
     ("thanks, that's all",                 "LOW"),
@@ -31,8 +32,24 @@ def test_empty_is_medium():
     assert classify("")[0] == "MEDIUM"
 
 
+def test_effort_params_map_to_native():
+    assert effort_params("HIGH", "openai") == {"reasoning_effort": "high"}
+    assert effort_params("LOW", "anthropic") == {}          # thinking off
+    assert "budget_tokens" in effort_params("MAX", "anthropic")["thinking"]
+    assert effort_params("MEDIUM", "gemini") == {"thinking_budget": 4096}
+    assert effort_params("HIGH", "unknown-provider") == {}  # safe fallback
+
+
+def test_evaluate_with_provider():
+    out = evaluate("refactor the whole architecture", provider="openai")
+    assert out["level"] == "MAX"
+    assert out["params"] == {"reasoning_effort": "high"}
+
+
 if __name__ == "__main__":
     test_levels()
     test_directive_and_badge_for_each_level()
     test_empty_is_medium()
-    print(f"OK — {len(CASES)} classification cases + directives/badges + empty all pass.")
+    test_effort_params_map_to_native()
+    test_evaluate_with_provider()
+    print(f"OK — {len(CASES)} cases + directives/badges + empty + native-params + evaluate all pass.")

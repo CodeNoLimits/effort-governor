@@ -90,14 +90,39 @@ task="refactor the auth module"
 grok -p "$(effort_prefix "$task") $task"
 ```
 
-### Any agent / API
+### Any agent / API — wire to the *real* budget (v0.2)
+
+Providers now expose native effort/thinking knobs. `effort-governor` maps each
+level straight to them, so the decision stops being cosmetic:
 
 ```python
 from effort_governor import evaluate
-e = evaluate(user_prompt)
-# e["level"], e["directive"], e["badge"] — map e["level"] to your
-# reasoning_effort / thinking budget if your provider exposes one.
+import anthropic
+
+e = evaluate(user_prompt, provider="anthropic")
+# e == {"level": "HIGH", "reason": "...", "directive": "...",
+#       "badge": "...", "params": {"thinking": {"type": "enabled",
+#                                                "budget_tokens": 16384}}}
+
+anthropic.Anthropic().messages.create(
+    model="claude-...", max_tokens=4096,
+    messages=[{"role": "user", "content": user_prompt}],
+    **e["params"],            # ← native thinking budget, chosen per task
+)
 ```
+
+Native parameter mapping (defaults — override via config; **verify against
+current provider docs**, these evolve):
+
+| Level | OpenAI `reasoning_effort` | Anthropic `thinking.budget_tokens` | Gemini `thinking_budget` |
+|-------|---------------------------|------------------------------------|--------------------------|
+| LOW   | `low` | off | `0` |
+| MEDIUM| `medium` | `4096` | `4096` |
+| HIGH  | `high` | `16384` | `16384` |
+| MAX   | `high` | `32768` | `24576` |
+
+CLI: `echo "refactor X" | bin/effort-select --params anthropic` →
+`{"thinking": {"type": "enabled", "budget_tokens": 32768}}`
 
 ## Configure (no code edit)
 

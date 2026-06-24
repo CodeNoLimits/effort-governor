@@ -59,12 +59,38 @@ DIRECTIVES = {
 }
 ICON = {"LOW": "·", "MEDIUM": "◦", "HIGH": "▲", "MAX": "★"}
 
+# Map each level to a provider's NATIVE effort/thinking parameter. This is what
+# turns the badge from cosmetic into a real budget lever for API callers.
+# ⚠️ Param names & accepted values evolve fast — verify against current provider
+# docs. These are sensible defaults you can override via config ("effort_params").
+EFFORT_PARAMS = {
+    "openai": {  # reasoning models: reasoning_effort
+        "LOW": {"reasoning_effort": "low"},
+        "MEDIUM": {"reasoning_effort": "medium"},
+        "HIGH": {"reasoning_effort": "high"},
+        "MAX": {"reasoning_effort": "high"},
+    },
+    "anthropic": {  # extended thinking: thinking.budget_tokens (LOW = off)
+        "LOW": {},
+        "MEDIUM": {"thinking": {"type": "enabled", "budget_tokens": 4096}},
+        "HIGH": {"thinking": {"type": "enabled", "budget_tokens": 16384}},
+        "MAX": {"thinking": {"type": "enabled", "budget_tokens": 32768}},
+    },
+    "gemini": {  # thinking_config.thinking_budget (0 = off, -1 = dynamic)
+        "LOW": {"thinking_budget": 0},
+        "MEDIUM": {"thinking_budget": 4096},
+        "HIGH": {"thinking_budget": 16384},
+        "MAX": {"thinking_budget": 24576},
+    },
+}
+
 
 def _load_config():
     path = os.environ.get("EFFORT_GOVERNOR_CONFIG") or os.path.expanduser(
         "~/.config/effort-governor/config.json")
     cfg = {"max_kw": MAX_KW, "high_kw": HIGH_KW, "low_kw": LOW_KW,
-           "thresholds": dict(THRESHOLDS), "directives": dict(DIRECTIVES)}
+           "thresholds": dict(THRESHOLDS), "directives": dict(DIRECTIVES),
+           "effort_params": {p: dict(v) for p, v in EFFORT_PARAMS.items()}}
     try:
         with open(path, encoding="utf-8") as f:
             user = json.load(f)
@@ -75,6 +101,9 @@ def _load_config():
             cfg["thresholds"].update(user["thresholds"])
         if "directives" in user:
             cfg["directives"].update(user["directives"])
+        if "effort_params" in user:
+            for prov, mapping in user["effort_params"].items():
+                cfg["effort_params"].setdefault(prov, {}).update(mapping)
     except Exception:
         pass  # no config / unreadable -> defaults
     return cfg
@@ -128,9 +157,22 @@ def badge(level: str, reason: str) -> str:
     return f"{ICON.get(level, '◦')} EFFORT ⟶ {level}  ·  {reason}"
 
 
-def evaluate(prompt: str):
-    """One-shot convenience: return full dict."""
+def effort_params(level: str, provider: str = "openai", cfg=None) -> dict:
+    """Native effort/thinking kwargs for a provider — splat into your API call.
+
+    >>> effort_params("HIGH", "openai")
+    {'reasoning_effort': 'high'}
+    """
+    cfg = cfg or _load_config()
+    return dict(cfg["effort_params"].get(provider, {}).get(level, {}))
+
+
+def evaluate(prompt: str, provider: str = None):
+    """One-shot convenience: return full dict (+ native params if provider given)."""
     cfg = _load_config()
     level, reason = classify(prompt, cfg)
-    return {"level": level, "reason": reason,
-            "directive": directive(level, cfg), "badge": badge(level, reason)}
+    out = {"level": level, "reason": reason,
+           "directive": directive(level, cfg), "badge": badge(level, reason)}
+    if provider:
+        out["params"] = effort_params(level, provider, cfg)
+    return out
